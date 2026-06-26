@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Cloud Monitoring</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f5f7fa;
+padding:40px;
+}
+
+.box{
+width:300px;
+padding:20px;
+
+border-radius:10px;
+
+background:white;
+
+box-shadow:0 0 10px rgba(0,0,0,.1);
+
+margin-bottom:30px;
+}
+
+.number{
+font-size:45px;
+
+color:green;
+}
+
+canvas{
+
+max-width:900px;
+
+background:white;
+
+padding:20px;
+
+border-radius:10px;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="box">
+
+<h2>Total Requests</h2>
+
+<div class="number" id="total">
+
+0
+
+</div>
+
+<p>Last 1 Hour</p>
+
+</div>
+
+
+<canvas id="chart"></canvas>
+
+<script>
+
+const ctx=
+document
+.getElementById("chart");
+
+const graph=
+new Chart(
+ctx,
+{
+type:"line",
+
+data:{
+labels:[],
+
+datasets:[
+{
+
+label:
+"Requests",
+
+data:[]
+
+}
+
+]
+
+}
+
+}
+
+);
+
+async function loadData(){
+
+const data=
+await fetch(
+"https://7vxywwzqm4.execute-api.ap-southeast-2.amazonaws.com/prod"
+);
+
+const response =
+await data.json();
+
+const result =
+JSON.parse(
+response.body
+);
+
+
+document
+.getElementById(
+"total"
+)
+.innerText=
+result.totalRequests;
+
+
+graph.data.labels=
+result.trend.map(
+x=>x.time
+);
+
+graph.data.datasets[0].data=
+result.trend.map(
+x=>x.count
+);
+
+graph.update();
+
+}
+
+loadData();
+
+setInterval(
+loadData,
+5000
+);
+
+</script>
+
+</body>
+</html>
