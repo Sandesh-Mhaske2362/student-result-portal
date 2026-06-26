@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html>
 
 <head>
@@ -59,98 +58,56 @@ Loading...
 
 <script>
 
-const ctx =
-document.getElementById("chart");
+const ctx = document.getElementById("chart");
 
-const graph =
-new Chart(
-ctx,
-{
-type:"line",
-
-data:{
-labels:[],
-datasets:[
-{
-label:"Requests",
-data:[]
-}
-]
-},
-
-options:{
-responsive:true
-}
-
-}
-);
+const graph = new Chart(ctx,{
+    type:"line",
+    data:{
+        labels:[],
+        datasets:[
+            {
+                label:"Requests",
+                data:[]
+            }
+        ]
+    },
+    options:{
+        responsive:true
+    }
+});
 
 async function loadData(){
 
-try{
+    try{
 
-const response =
-await fetch(
-"https://7vxywwzqm4.execute-api.ap-southeast-2.amazonaws.com/prod"
-);
+        const response = await fetch(
+        "https://7vxywwzqm4.execute-api.ap-southeast-2.amazonaws.com/prod/status"
+        );
 
-const api =
-await response.json();
+        const result = await response.json();
 
-let result;
+        document.getElementById("total").innerText = result.totalRequests;
 
-if(api.body){
+        graph.data.labels = result.trend.map(item => item.time);
 
-result =
-JSON.parse(api.body);
+        graph.data.datasets[0].data = result.trend.map(item => item.count);
 
-}
-else{
+        graph.update();
 
-result =
-api;
+    }
+    catch(error){
 
-}
+        console.error(error);
 
-document
-.getElementById("total")
-.innerText =
-result.totalRequests;
+        document.getElementById("total").innerText="Error";
 
-
-graph.data.labels =
-result.trend.map(
-item=>item.time
-);
-
-graph.data.datasets[0].data =
-result.trend.map(
-item=>item.count
-);
-
-graph.update();
-
-}
-
-catch(error){
-
-console.log(error);
-
-document
-.getElementById("total")
-.innerText =
-"Error";
-
-}
+    }
 
 }
 
 loadData();
 
-setInterval(
-loadData,
-5000
-);
+setInterval(loadData,5000);
 
 </script>
 
