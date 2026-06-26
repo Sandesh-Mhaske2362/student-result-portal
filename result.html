@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Result</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body {
+    background: linear-gradient(135deg, #1d2671, #c33764);
+}
+
+.result-card {
+    box-shadow:
+        0 10px 25px rgba(0,0,0,0.25),
+        0 20px 40px rgba(0,0,0,0.15);
+    border-radius: 15px;
+}
+
+@keyframes passGlow {
+    0% { box-shadow: 0 0 0 rgba(40,167,69,0.4); }
+    50% { box-shadow: 0 0 30px rgba(40,167,69,0.9); }
+    100% { box-shadow: 0 0 0 rgba(40,167,69,0.4); }
+}
+
+.pass-animation {
+    animation: passGlow 1.5s ease-in-out;
+    border: 2px solid #28a745;
+}
+
+.fail-text {
+    font-weight: bold;
+    color: #dc3545;
+}
+
+table th {
+    background-color: #f8f9fa;
+}
+</style>
+
+</head>
+
+<body class="d-flex align-items-center justify-content-center vh-100">
+
+<div id="resultCard" class="card p-4 text-dark result-card" style="width:440px;">
+
+<h4 class="text-center mb-3">📄 Result Sheet</h4>
+
+<div id="output">Loading result...</div>
+
+<button onclick="downloadPDF()" class="btn btn-outline-primary mt-2 w-100">
+Download Marksheet PDF
+</button>
+
+<a href="index.html" class="btn btn-secondary mt-2 w-100">
+Check Another
+</a>
+
+</div>
+
+<script>
+
+/* ================= PDF DOWNLOAD ================= */
+
+function downloadPDF() {
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF();
+
+    let y = 20;
+
+    pdf.setFontSize(18);
+    pdf.text("JSPM University,Pune,Maharashtra", 55, y);
+
+    pdf.setFontSize(12);
+    y += 10;
+    pdf.text("Official Student Marksheet", 70, y);
+
+    y += 15;
+    pdf.line(20, y, 190, y);
+
+    const output = document.getElementById("output");
+
+    const nameText = output.querySelector("p").innerText;
+    pdf.setFontSize(12);
+
+    y += 10;
+    pdf.text(nameText, 20, y);
+
+    /* Table Header */
+    y += 15;
+
+    pdf.rect(20, y, 80, 10);
+    pdf.rect(100, y, 80, 10);
+
+    pdf.text("Subject", 45, y + 7);
+    pdf.text("Marks", 130, y + 7);
+
+    y += 10;
+
+    /* Subject Marks */
+    const rows = output.querySelectorAll("tbody tr");
+
+    rows.forEach(row => {
+
+        let cols = row.querySelectorAll("td");
+
+        pdf.rect(20, y, 80, 10);
+        pdf.rect(100, y, 80, 10);
+
+        pdf.text(cols[0].innerText, 30, y + 7);
+        pdf.text(cols[1].innerText, 130, y + 7);
+
+        y += 10;
+    });
+
+    y += 10;
+
+    const paras = output.querySelectorAll("p");
+
+    paras.forEach(p => {
+        if(p.innerText.includes("Percentage") || p.innerText.includes("Status")){
+            pdf.text(p.innerText, 20, y);
+            y += 10;
+        }
+    });
+
+    const resultText = output.querySelector(".text-success, .fail-text");
+
+    if(resultText){
+        pdf.setFontSize(14);
+        y += 5;
+        pdf.text(resultText.innerText, 20, y);
+    }
+
+    pdf.line(20, 280, 190, 280);
+    pdf.setFontSize(10);
+    pdf.text("Generated from Student Result Portal", 65, 287);
+
+    pdf.save("College_Marksheet.pdf");
+}
+
+/* ================= FETCH RESULT ================= */
+
+const params = new URLSearchParams(window.location.search);
+const roll_no = params.get("roll_no");
+const mother_name = params.get("mother_name");
+
+fetch("https://97t4jcv9th.execute-api.ap-southeast-2.amazonaws.com/prod/get-result", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ roll_no, mother_name })
+})
+.then(res => res.json())
+.then(data => {
+
+    if (!data.student_name) {
+        document.getElementById("output").innerHTML =
+            `<p class="text-danger">Result not found ❌</p>`;
+        return;
+    }
+
+    let message = "";
+
+    if (data.status === "Pass") {
+        document.getElementById("resultCard").classList.add("pass-animation");
+        message = `<p class="text-success fw-bold mt-2"> Congratulations ! You passed</p>`;
+    } else {
+        message = `<p class="fail-text mt-2"> Better luck, try next time</p>`;
+    }
+
+    document.getElementById("output").innerHTML = `
+        <p><b>Name:</b> ${data.student_name}</p>
+
+        <table class="table table-bordered mt-3 text-center">
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Marks</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Marathi</td><td>${data.Marathi}</td></tr>
+                <tr><td>English</td><td>${data.English}</td></tr>
+                <tr><td>Hindi</td><td>${data.Hindi}</td></tr>
+                <tr><td>Mathematics</td><td>${data.Mathematics}</td></tr>
+                <tr><td>Science</td><td>${data.Science}</td></tr>
+                <tr><td>History</td><td>${data.History}</td></tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <p><b>Percentage:</b> ${data.percentage}%</p>
+        <p><b>Status:</b> ${data.status}</p>
+
+        ${message}
+    `;
+})
+.catch(() => {
+    document.getElementById("output").innerHTML =
+        `<p class="text-danger">Server error ❌</p>`;
+});
+
+</script>
+
+</body>
+</html> 
